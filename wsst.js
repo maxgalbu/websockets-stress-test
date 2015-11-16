@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 var
     cli       = require('cli'),
     querystring = require('querystring'),
-    WebSocket = require('ws'),
+    io = require('socket.io-client'),
     test,
     multipleTest,
     writeJson;
@@ -77,7 +77,7 @@ test = function (webSocketUrl, scenarioName, countConnections, options, cli, cal
             var api;
 
             connections[index] = {
-                socket:      new WebSocket(url),
+                socket:      io(url),
                 checkpoints: []
             };
 
@@ -109,7 +109,7 @@ test = function (webSocketUrl, scenarioName, countConnections, options, cli, cal
                 }
             };
 
-            connections[index].socket.on('open', function () {
+            connections[index].socket.on('connect', function () {
                 countOpened++;
 
                 // Add default checkpoint when connection opens
@@ -119,7 +119,7 @@ test = function (webSocketUrl, scenarioName, countConnections, options, cli, cal
                 scenario.init(connections[index].socket, api);
             });
 
-            connections[index].socket.on('close', function () {
+            connections[index].socket.on('disconnect', function () {
                 var i, j, result, connectionTime;
 
                 // Add default checkoint when connection closed
