@@ -58,12 +58,17 @@ test = function (webSocketUrl, scenarioName, countConnections, options, cli, cal
         startTime   = (new Date()).getTime(),
         endTime     = null,
         connections = [],
-        scenario    = require(scenarioName[0] === '/' ? scenarioName : './' + scenarioName),
+        scenario    = require(scenarioName[0] === '/' ? scenarioName : process.cwd() + "/" + scenarioName),
         url         = webSocketUrl + (scenario.path ? scenario.path : ''),
         countOpened = 0;
 
     if (options.connectionParamsFile) {
-        var connectionParams = require(options.connectionParamsFile)();
+        var connectionParamsPath = options.connectionParamsFile;
+        if (options.connectionParamsFile[0] !== '/') {
+            connectionParamsPath = process.cwd() + "/" + options.connectionParamsFile;
+        }
+
+        var connectionParams = require(connectionParamsPath)();
         url += "&"+querystring.stringify(connectionParams);
     }
 
