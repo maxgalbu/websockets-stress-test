@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 var
     cli       = require('cli'),
+    querystring = require('querystring'),
     WebSocket = require('ws'),
     test,
     multipleTest,
@@ -49,15 +50,22 @@ var
  * @param cli
  * @param callback
  */
-test = function (webSocketUrl, scenarioName, countConnections, cli, callback) {
+test = function (webSocketUrl, scenarioName, countConnections, options, cli, callback) {
     var
         i,
         startTime   = (new Date()).getTime(),
         endTime     = null,
         connections = [],
         scenario    = require(scenarioName[0] === '/' ? scenarioName : './' + scenarioName),
-        url         = webSocketUrl + (scenario.path ? scenario.path : '')
+        url         = webSocketUrl + (scenario.path ? scenario.path : ''),
         countOpened = 0;
+
+    if (options.connectionParamsFile) {
+        var connectionParams = require(options.connectionParamsFile)();
+        url += "&"+querystring.stringify(connectionParams);
+    }
+
+    console.log(url);
 
     cli.info('Scenario: ' + scenario.name);
     cli.info(scenario.description);
@@ -258,9 +266,10 @@ cli.setUsage(
 );
 
 cli.parse({
-    connections:     ['c', 'Single test for specified count of connections', 'int', '100'],
-    connectionsList: ['l', 'Multiple tests for specified list count of connections (-l 1,10,100,1000)', 'string'],
-    output:          ['o', 'File to save JSON result', 'file']
+    connections:            ['c', 'Single test for specified count of connections', 'int', '100'],
+    connectionsList:        ['l', 'Multiple tests for specified list count of connections (-l 1,10,100,1000)', 'string'],
+    output:                 ['o', 'File to save JSON result', 'file'],
+    connectionParamsFile:   ['p', 'Connect params for each connection', 'file'],
 });
 
 cli.main(function (args, options) {
@@ -273,13 +282,13 @@ cli.main(function (args, options) {
     if (options.connectionsList) {
         connections = options.connectionsList.split(',');
 
-        multipleTest(args[0], args[1], connections, cli, function (result) {
+        multipleTest(args[0], args[1], connections, options, cli, function (result) {
             if (options.output) {
                 writeJson(result);
             }
         });
     } else {
-        test(args[0], args[1], options.connections, cli, function (result) {
+        test(args[0], args[1], options.connections, options, cli, function (result) {
             if (options.output) {
                 writeJson([result]);
             }
