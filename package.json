@@ -1,7 +1,7 @@
 {
   "name": "wsst",
   "description": "WebSockets Stress Test - Tool written in NodeJS that allows to make a stress test for your application that uses WebSockets. You can create behavior scenarios that tool will run on every connection in test.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "homepage": "",
   "keywords": [
     "wsst",
@@ -14,18 +14,25 @@
   "main": "wsst.js",
   "bugs": {
     "mail": "bogus.weber@gmail.com",
-    "url": "http://github.com/qarea/websockets-stress-test/issues"
+    "url": "http://github.com/maxgalbu/websockets-stress-test/issues"
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/qarea/websockets-stress-test.git"
+    "url": "http://github.com/maxgalbu/websockets-stress-test.git"
   },
   "contributors": [
     {
       "name": "Bogdan Tkachenko",
       "github": "https://github.com/bogus-weber"
+    },
+    {
+      "name": "Massimo Galbusera",
+      "github": "https://github.com/maxgalbu"
     }
   ],
+  "bin": {
+    "wsst": "wsst.js"
+  },
   "engines": {
     "node": ">=0.2.5"
   },

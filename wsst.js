@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /*
 Copyright (c) 2011 Bogdan Tkachenko <bogus.weber@gmail.com>
 

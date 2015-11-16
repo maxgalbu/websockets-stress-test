@@ -11,8 +11,13 @@ tool will run on every connection in test.
 Installation
 ------------
 
-cd websockets-stress-test
+    npm install -g wsst
 
-npm install
+Usage
+-----
 
-node wsst.js -h
+    //Help
+   	wsst -h
+
+    //Run 100 connections
+    wsst -c 100 ws://localhost:1080 your-scenario.js
