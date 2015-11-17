@@ -62,17 +62,16 @@ test = function (webSocketUrl, scenarioName, countConnections, options, cli, cal
         url         = webSocketUrl + (scenario.path ? scenario.path : ''),
         countOpened = 0;
 
+
+    var getConnectionParams = null;
     if (options.connectionParamsFile) {
-        var connectionParamsPath = options.connectionParamsFile;
+        connectionParamsPath = options.connectionParamsFile;
         if (options.connectionParamsFile[0] !== '/') {
             connectionParamsPath = process.cwd() + "/" + options.connectionParamsFile;
         }
 
-        var connectionParams = require(connectionParamsPath)();
-        url += "&"+querystring.stringify(connectionParams);
+        getConnectionParams = require(connectionParamsPath);
     }
-
-    console.log(url);
 
     cli.info('Scenario: ' + scenario.name);
     cli.info(scenario.description);
@@ -83,8 +82,13 @@ test = function (webSocketUrl, scenarioName, countConnections, options, cli, cal
         (function(index) {
             var api;
 
+            var connectionUrl = url;
+            if (getConnectionParams) {
+                connectionUrl += "&"+querystring.stringify(getConnectionParams());
+            }
+
             connections[index] = {
-                socket:      io(url),
+                socket:      io(connectionUrl, {forceNew:true}),
                 checkpoints: []
             };
 
