@@ -36,7 +36,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 var
     cli       = require('cli'),
     querystring = require('querystring'),
-    io = require('socket.io-client');
+    io = require('socket.io-client'),
+    AsciiTable = require('ascii-table');
 
 var checkFinished = function(connections, url, scenarioName, countConnections, countOpened, countClosed, startTime, callback) {
     // If we haven't any another connections
@@ -111,18 +112,19 @@ var checkFinished = function(connections, url, scenarioName, countConnections, c
         cli.ok('--------------------------------------------------\n');
 
         cli.ok('Time profiler:');
-        cli.ok('----------------------------------------------------------------------------------');
-        cli.ok('| #\t| Average\t| Minimum\t| Maximum\t| Name')
-        cli.ok('----------------------------------------------------------------------------------');
-        for (j in result.checkpoints) {
-            cli.ok('| ' + j + '\t| '
-                + result.checkpoints[j].avg + '\t\t| '
-                + result.checkpoints[j].min + '\t\t| '
-                + result.checkpoints[j].max + '\t\t| '
-                + result.checkpoints[j].text);
+
+        var table = new AsciiTable()
+        table.setHeading('Average', 'Minimum', 'Maximum', 'Name');
+        for (var j in result.checkpoints) {
+            table.addRow(
+                result.checkpoints[j].avg,
+                result.checkpoints[j].min,
+                result.checkpoints[j].max,
+                result.checkpoints[j].text
+            );
         }
 
-        cli.ok('----------------------------------------------------------------------------------');
+        console.log(table.toString());
 
         if (typeof callback === 'function') {
             callback.call(cli, result);

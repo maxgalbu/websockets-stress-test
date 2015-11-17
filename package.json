@@ -37,6 +37,7 @@
     "node": ">=0.2.5"
   },
   "dependencies": {
+    "ascii-table": "0.0.8",
     "cli": "latest",
     "socket.io-client": "^1.3.7"
   },
