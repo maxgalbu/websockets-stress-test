@@ -205,7 +205,7 @@ var test = function (webSocketUrl, scenarioName, countConnections, options, cli,
                         total:  0
                     });
 
-                    cli.debug('Checkpoint: ' + text);
+                    cli.debug('Checkpoint (conn #'+index+'): ' + text);
                 }
             };
 
