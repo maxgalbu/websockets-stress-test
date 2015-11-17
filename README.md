@@ -1,5 +1,4 @@
-README
-======
+[![npm version](https://badge.fury.io/js/wsst.svg)](https://badge.fury.io/js/wsst)
 
 Description
 -----------------
