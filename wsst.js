@@ -177,7 +177,7 @@ var test = function (webSocketUrl, scenarioName, countConnections, options, cli,
             }
 
             connections[index] = {
-                socket:      io(connectionUrl, {forceNew:true}),
+                socket:      io(connectionUrl, {forceNew:true, reconnect:true}),
                 checkpoints: []
             };
 
