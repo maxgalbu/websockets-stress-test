@@ -39,29 +39,29 @@ var
     io = require('socket.io-client'),
     AsciiTable = require('ascii-table');
 
-var checkFinished = function(connections, url, scenarioName, countConnections, countOpened, countClosed, startTime, callback) {
+var checkFinished = function(params) {
     // If we haven't any another connections
-    if (countOpened === countClosed && countOpened == countConnections && countClosed == countConnections) {
+    if (params.countOpened === params.countClosed && params.countOpened == params.countConnections && params.countClosed == params.countConnections) {
         // Save test end time
         var endTime = (new Date()).getTime();
 
         // Prepare result
         var result = {
-            connections:  countConnections,
-            scenarioName: scenarioName,
-            url:          url,
-            total:        (endTime - startTime),
+            connections:  params.countConnections,
+            scenarioName: params.scenarioName,
+            url:          params.url,
+            total:        (endTime - params.startTime),
             avg:          0,
             min:          null,
             max:          null,
             checkpoints:  []
         };
 
-        for (var i in connections) {
+        for (var i in params.connections) {
             // Calculate total connection time
             var connectionTime = 0;
-            if (connections[i].checkpoints.length) {
-                connectionTime = connections[i].checkpoints[connections[i].checkpoints.length-1].end - connections[i].checkpoints[0].start;
+            if (params.connections[i].checkpoints.length) {
+                connectionTime = params.connections[i].checkpoints[params.connections[i].checkpoints.length-1].end - params.connections[i].checkpoints[0].start;
             }
 
             result.avg += connectionTime;
@@ -75,31 +75,31 @@ var checkFinished = function(connections, url, scenarioName, countConnections, c
             }
 
             // And now for every checkpoint
-            for (var j in connections[i].checkpoints) {
+            for (var j in params.connections[i].checkpoints) {
                 if (!result.checkpoints[j]) {
                     result.checkpoints[j] = {
-                        text: connections[i].checkpoints[j].text,
+                        text: params.connections[i].checkpoints[j].text,
                         avg:  0,
                         min:  null,
                         max:  null
                     };
                 }
 
-                result.checkpoints[j].avg += connections[i].checkpoints[j].total;
+                result.checkpoints[j].avg += params.connections[i].checkpoints[j].total;
 
-                if (result.checkpoints[j].min > connections[i].checkpoints[j].total || result.checkpoints[j].min === null) {
-                    result.checkpoints[j].min = connections[i].checkpoints[j].total;
+                if (result.checkpoints[j].min > params.connections[i].checkpoints[j].total || result.checkpoints[j].min === null) {
+                    result.checkpoints[j].min = params.connections[i].checkpoints[j].total;
                 }
 
-                if (result.checkpoints[j].max < connections[i].checkpoints[j].total || result.checkpoints[j].max === null) {
-                    result.checkpoints[j].max = connections[i].checkpoints[j].total;
+                if (result.checkpoints[j].max < params.connections[i].checkpoints[j].total || result.checkpoints[j].max === null) {
+                    result.checkpoints[j].max = params.connections[i].checkpoints[j].total;
                 }
             }
         }
 
-        result.avg /= countConnections;
+        result.avg /= params.countConnections;
         for (var j in result.checkpoints) {
-            result.checkpoints[j].avg /= countConnections;
+            result.checkpoints[j].avg /= params.countConnections;
         }
 
         cli.ok('');
@@ -113,23 +113,80 @@ var checkFinished = function(connections, url, scenarioName, countConnections, c
 
         cli.ok('Time profiler:');
 
-        var table = new AsciiTable()
+        var table = new AsciiTable();
         table.setHeading('Average', 'Minimum', 'Maximum', 'Name');
-        for (var j in result.checkpoints) {
+        for (var c in result.checkpoints) {
             table.addRow(
-                result.checkpoints[j].avg,
-                result.checkpoints[j].min,
-                result.checkpoints[j].max,
-                result.checkpoints[j].text
+                result.checkpoints[c].avg,
+                result.checkpoints[c].min,
+                result.checkpoints[c].max,
+                result.checkpoints[c].text
             );
         }
 
         console.log(table.toString());
 
-        if (typeof callback === 'function') {
-            callback.call(cli, result);
+        if (typeof params.callback === 'function') {
+            params.callback.call(cli, result);
         }
     }
+};
+
+var singleConnectionTest = function(index, params) {
+    var connectionUrl = params.url;
+    if (params.getConnectionParams) {
+        connectionUrl += "&"+querystring.stringify(params.getConnectionParams());
+    }
+
+    params.connections[index] = {
+        socket:      io(connectionUrl, {forceNew:true, reconnect:true}),
+        checkpoints: []
+    };
+
+    var api = {
+        /**
+         * Create checkpoint in scenario
+         *
+         * @param text
+         */
+        checkpoint: function (text) {
+            var time = (new Date()).getTime();
+            var count = params.connections[index].checkpoints.length;
+
+            if (count > 0) {
+                params.connections[index].checkpoints[count - 1].end = time;
+                params.connections[index].checkpoints[count - 1].total = time;
+                params.connections[index].checkpoints[count - 1].total -= params.connections[index].checkpoints[count - 1].start;
+            }
+
+            params.connections[index].checkpoints.push({
+                text:   text,
+                start:  time,
+                end:    time,
+                total:  0
+            });
+
+            cli.debug('Checkpoint (conn #'+index+'): ' + text);
+        }
+    };
+
+    params.connections[index].socket.on('connect', function () {
+        params.countOpened++;
+
+        // Add default checkpoint when connection opens
+        api.checkpoint('Connection opened');
+
+        // And run scenario on this connection
+        params.scenario.init(params.connections[index].socket, api);
+    });
+
+    params.connections[index].socket.on('disconnect', function () {
+        // Add default checkoint when connection closed
+        api.checkpoint('Connection closed');
+        params.countClosed++;
+
+        checkFinished(params);
+    });
 };
 
 /**
@@ -144,89 +201,36 @@ var checkFinished = function(connections, url, scenarioName, countConnections, c
  * @param callback
  */
 var test = function (webSocketUrl, scenarioName, countConnections, options, cli, callback) {
-    var
-        i,
-        startTime   = (new Date()).getTime(),
-        connections = [],
-        scenario    = require(scenarioName[0] === '/' ? scenarioName : process.cwd() + "/" + scenarioName),
-        url         = webSocketUrl + (scenario.path ? scenario.path : ''),
-        countOpened = 0,
-        countClosed = 0;
+    var params = {
+        connections: [],
+        scenarioName: scenarioName,
+        scenario: require(scenarioName[0] === '/' ? scenarioName : process.cwd() + "/" + scenarioName),
+        startTime: (new Date()).getTime(),
+        callback: callback,
+        countConnections: countConnections,
+        countOpened: 0,
+        countClosed: 0,
+        getConnectionParams: null,
+    };
 
+    params.url = webSocketUrl + (params.scenario.path ? params.scenario.path : '');
 
-    var getConnectionParams = null;
     if (options.connectionParamsFile) {
-        connectionParamsPath = options.connectionParamsFile;
+        var connectionParamsPath = options.connectionParamsFile;
         if (options.connectionParamsFile[0] !== '/') {
             connectionParamsPath = process.cwd() + "/" + options.connectionParamsFile;
         }
 
-        getConnectionParams = require(connectionParamsPath);
+        params.getConnectionParams = require(connectionParamsPath);
     }
 
-    cli.info('Scenario: ' + scenario.name);
-    cli.info(scenario.description);
+    cli.info('Scenario: ' + params.scenario.name);
+    cli.info(params.scenario.description);
     cli.info('-----------------------------\n');
-    cli.info('Starting test for ' + countConnections + ' connections...');
+    cli.info('Starting test for ' + params.countConnections + ' connections...');
 
-    for (i=0; i<countConnections; i++) {
-        (function(index) {
-            var connectionUrl = url;
-            if (getConnectionParams) {
-                connectionUrl += "&"+querystring.stringify(getConnectionParams());
-            }
-
-            connections[index] = {
-                socket:      io(connectionUrl, {forceNew:true, reconnect:true}),
-                checkpoints: []
-            };
-
-            var api = {
-                /**
-                 * Create checkpoint in scenario
-                 *
-                 * @param text
-                 */
-                checkpoint: function (text) {
-                    var time = (new Date()).getTime(), count;
-
-                    count = connections[index].checkpoints.length;
-
-                    if (count > 0) {
-                        connections[index].checkpoints[count - 1].end = time;
-                        connections[index].checkpoints[count - 1].total = time;
-                        connections[index].checkpoints[count - 1].total -= connections[index].checkpoints[count - 1].start;
-                    }
-
-                    connections[index].checkpoints.push({
-                        text:   text,
-                        start:  time,
-                        end:    time,
-                        total:  0
-                    });
-
-                    cli.debug('Checkpoint (conn #'+index+'): ' + text);
-                }
-            };
-
-            connections[index].socket.on('connect', function () {
-                countOpened++;
-
-                // Add default checkpoint when connection opens
-                api.checkpoint('Connection opened');
-
-                // And run scenario on this connection
-                scenario.init(connections[index].socket, api);
-            });
-
-            connections[index].socket.on('disconnect', function () {
-                // Add default checkoint when connection closed
-                api.checkpoint('Connection closed');
-                countClosed++;
-
-                checkFinished(connections, url, scenarioName, countConnections, countOpened, countClosed, startTime, callback);
-            });
-        })(i);
+    for (var i = 0; i < params.countConnections; i++) {
+        singleConnectionTest(i, params);
     }
 };
 
