@@ -139,7 +139,10 @@ var singleConnectionTest = function(index, params) {
     }
 
     params.connections[index] = {
-        socket:      io(connectionUrl, {forceNew:true, reconnect:true}),
+        socket:      io(connectionUrl, {
+            forceNew: true,
+            reconnect: false
+        }),
         checkpoints: []
     };
 
