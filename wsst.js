@@ -203,7 +203,7 @@ var singleConnectionTest = function(index, params) {
  * @param cli
  * @param callback
  */
-var test = function (webSocketUrl, scenarioName, countConnections, options, cli, callback) {
+var test = function (webSocketUrl, scenarioName, countConnections, options, callback) {
     var params = {
         connections: [],
         scenarioName: scenarioName,
@@ -259,7 +259,7 @@ var writeJson = function (fileName, data) {
  * @param cli
  * @param callback
  */
-var multipleTest = function (webSocketUrl, scenarioName, countConnections, cli, callback) {
+var multipleTest = function (webSocketUrl, scenarioName, countConnections, options, callback) {
     var
         i = 0, results = [];
 
@@ -269,7 +269,7 @@ var multipleTest = function (webSocketUrl, scenarioName, countConnections, cli, 
         }
 
         if (countConnections[i]) {
-            test(webSocketUrl, scenarioName, countConnections[i], cli, singleTest);
+            test(webSocketUrl, scenarioName, countConnections[i], options, singleTest);
             i++;
         } else {
             callback.call(cli, results);
@@ -302,13 +302,13 @@ cli.main(function (args, options) {
     if (options.connectionsList) {
         connections = options.connectionsList.split(',');
 
-        multipleTest(args[0], args[1], connections, options, cli, function (result) {
+        multipleTest(args[0], args[1], connections, options, function (result) {
             if (options.output) {
                 writeJson(result);
             }
         });
     } else {
-        test(args[0], args[1], options.connections, options, cli, function (result) {
+        test(args[0], args[1], options.connections, options, function (result) {
             if (options.output) {
                 writeJson([result]);
             }
